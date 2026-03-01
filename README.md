@@ -46,6 +46,7 @@
 - [Skills 的配置](#skills-的配置)
 - [Skills 总览](#skills-总览)
 - [使用场景与示例 Prompt](#使用场景与示例-prompt)
+- [硕博学位论文写作场景](#硕博学位论文写作场景)
 
 ---
 
@@ -811,5 +812,45 @@ Skills 安装到 `.claude/skills/` 后，Cursor 启动时会自动发现并提�
 | 去 AI 味 / 润色后终稿检查 | humanizer | 待检查的段落或全文（LaTeX 片段、Word 正文、Markdown 等） | 「这段读起来像 AI 写的，帮我 humanize」「投稿前帮我把 Abstract 和 Introduction 去一下 AI 味」 | 重写后的自然文本 + 可选修改说明；保留原意与语气，减少显著性堆砌、破折号滥用、三点式、AI 高频词等 |
 | 用 Word 模板写投稿稿 | docx | 期刊/会议提供的 .docx 投稿模板；你的标题、作者、摘要、各节正文 | 「这是某期刊的 Word 模板，帮我把我的标题、摘要和正文填进去」「在模板里替换作者信息和 Section 1–4 的内容」 | 符合模板格式的 .docx 稿（可先解包再脚本替换占位内容，或按 OOXML 编辑后重新打包） |
 | 对 Word 稿做修订建议 | docx | 已写好的 .docx 论文或审稿意见 | 「按 redlining 流程，帮我在文档里标出需要改的几处」「把这段改成 tracked changes：原文删除、新文插入」 | 带修订痕迹的 .docx（仅标记改动处，便于作者接受/拒绝） |
+
+---
+
+## 硕博学位论文写作场景
+
+> 🎓 **适用对象**：在读硕士/博士研究生，手头已有 LaTeX 模板、实验大纲、实验数据与图片，希望借助 AI Agent 高效完成学位论文初稿。
+
+### 能做什么？
+
+结合上文介绍的 Skills，特别是 **20-ml-paper-writing** 与 **doc-coauthoring**，在你提供充分素材的前提下，Agent 可以：
+
+- 按学位论文章节结构（绪论→相关工作→方法→实验→总结）逐节起草正文
+- 在你已有的 LaTeX 模板（`.tex` 文件）中直接填写各章节内容，保留原模板的格式命令
+- 根据你提供的实验大纲和数值结果，生成包含 `booktabs` 规范的 LaTeX 表格与图说明（caption）
+- 对每节内容进行审稿人视角的逻辑核查与语言润色
+- 给出 BibTeX 参考文献条目（见下方"关于参考文献下载"说明）
+
+### 推荐工作流
+
+| 步骤 | 操作 | 示例 Prompt |
+|------|------|-------------|
+| 1. 准备素材 | 将 LaTeX 模板、实验大纲（`.md` 或 `.txt`）、实验图片路径、实验结果数值整理到同一项目目录 | — |
+| 2. 安装 Skills | `npx openskills install zechenzhangAGI/AI-research-SKILLs` | — |
+| 3. 初始化论文框架 | 触发 `20-ml-paper-writing`，指定模板路径与论文主题 | 「这是我的北师大硕士论文 LaTeX 模板（路径 `./thesis/main.tex`），研究方向是 XXX，帮我按学位论文格式初始化章节骨架」 |
+| 4. 逐章起草 | 用 `doc-coauthoring` 流程，每次提供该章对应的实验大纲与数据 | 「用协作流程写第三章"方法"，实验细节见 `./notes/method.md`，主要创新点是 XXX」 |
+| 5. 填入图表 | 提供图片路径与结果数值，让 Agent 生成 LaTeX 表格与 caption | 「把 `results/table1.csv` 做成 booktabs 风格的 LaTeX 表格，指标越高越好，最佳值加粗」 |
+| 6. 润色与去 AI 味 | 对每章定稿内容用 `humanizer` Skill 做终稿检查 | 「帮我把第二章的 Related Work 去一下 AI 味，保留学术准确性」 |
+| 7. 全文审查 | 参照"论文整体以 Reviewer 视角进行审视" Prompt | 见本文档 [论文整体以 Reviewer 视角进行审视](#论文整体以-reviewer-视角进行审视) |
+
+> ⚠️ **你仍需做的事**：AI 生成的内容需要你逐节审阅，确认论文陈述与实验事实一致；原创性判断、学术诚信声明、最终答辩内容仍需本人负责。
+
+### 关于参考文献：Skills 会自动帮你下载论文吗？
+
+**简短回答：Skills 本身不会自动下载 PDF 全文，但可以辅助生成和核验 BibTeX 条目。** 具体而言：
+
+- **能做的**：`20-ml-paper-writing` 会尝试通过搜索/API（如 Semantic Scholar、arXiv）查找你指定主题的代表性文献，并生成 BibTeX 格式的引用条目，供你复制进 `.bib` 文件。
+- **需要注意的**：无法确认的文献会被标注为 `[CITATION NEEDED]` 或 placeholder，**必须由你自行在 Google Scholar、CNKI 等平台核对**，防止出现幻觉引用（hallucinated citations）——这在 AI 写作中是常见风险。
+- **不能做的**：Skills **不会**自动下载 PDF 全文，也不会替你访问知网（CNKI）、万方等国内数据库付费文献，需要你自行获取全文并放入项目目录供 Agent 读取。
+
+**推荐做法**：先让 Agent 列出建议引用的文献清单，再由你在 CNKI / Google Scholar / arXiv 逐一核对并下载，然后将 `.pdf` 或 `.bib` 放入项目，告知 Agent「已有以下文献，请基于它们完成 Related Work」。
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Leey21/awesome-ai-research-writing&type=Date)](https://star-history.com/#Leey21/awesome-ai-research-writing&Date)
